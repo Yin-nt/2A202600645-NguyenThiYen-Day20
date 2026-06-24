@@ -1,5 +1,7 @@
 """Command-line entrypoint for the lab starter."""
 
+import json
+from pathlib import Path
 from typing import Annotated
 
 import typer
@@ -7,11 +9,13 @@ from rich.console import Console
 from rich.panel import Panel
 
 from multi_agent_research_lab.core.config import get_settings
-from multi_agent_research_lab.core.errors import StudentTodoError
 from multi_agent_research_lab.core.schemas import ResearchQuery
 from multi_agent_research_lab.core.state import ResearchState
+from multi_agent_research_lab.evaluation.benchmark import run_benchmark
+from multi_agent_research_lab.evaluation.report import render_research_run_report
 from multi_agent_research_lab.graph.workflow import MultiAgentWorkflow
 from multi_agent_research_lab.observability.logging import configure_logging
+from multi_agent_research_lab.services.llm_client import LLMClient
 
 app = typer.Typer(help="Multi-Agent Research Lab starter CLI")
 console = Console()
@@ -31,10 +35,11 @@ def baseline(
     _init()
     request = ResearchQuery(query=query)
     state = ResearchState(request=request)
-    state.final_answer = (
-        "Baseline skeleton response. TODO(student): replace this with a real single-agent "
-        "implementation and record latency/cost/quality metrics."
+    response = LLMClient().complete(
+        system_prompt="Answer as a single research agent.",
+        user_prompt=f"Research and summarize this query: {request.query}",
     )
+    state.final_answer = response.content
     console.print(Panel.fit(state.final_answer, title="Single-Agent Baseline"))
 
 
@@ -45,14 +50,17 @@ def multi_agent(
     """Run the multi-agent workflow skeleton."""
 
     _init()
-    state = ResearchState(request=ResearchQuery(query=query))
     workflow = MultiAgentWorkflow()
-    try:
-        result = workflow.run(state)
-    except StudentTodoError as exc:
-        console.print(Panel.fit(str(exc), title="Expected TODO", style="yellow"))
-        raise typer.Exit(code=2) from exc
-    console.print(result.model_dump_json(indent=2))
+    result, metrics = run_benchmark(
+        "multi-agent",
+        query,
+        lambda run_query: workflow.run(state=ResearchState(request=ResearchQuery(query=run_query))),
+    )
+    report_path = Path("reports") / "benchmark_report.md"
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    report_path.write_text(render_research_run_report(result, metrics), encoding="utf-8")
+    console.print(Panel.fit(str(report_path), title="Report Written"))
+    console.print(json.dumps(result.model_dump(mode="json"), indent=2, ensure_ascii=True))
 
 
 if __name__ == "__main__":
