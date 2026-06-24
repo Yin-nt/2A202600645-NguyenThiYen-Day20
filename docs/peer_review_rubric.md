@@ -1,20 +1,20 @@
-# Peer Review Rubric
+# Rubric Peer Review
 
-Mỗi nhóm review repo/trace của một nhóm khác trong 8 phút.
+Mỗi nhóm review repo, trace và report của một nhóm khác trong 8 phút.
 
-| Tiêu chí | Câu hỏi | Điểm |
+| Tiêu chí | Câu hỏi đánh giá | Điểm |
 |---|---|---:|
-| Role clarity | Mỗi agent có nhiệm vụ rõ, không overlap quá nhiều không? | 0-2 |
-| State design | Shared state có đủ thông tin để handoff mà không mất context không? | 0-2 |
-| Failure guard | Có max iterations, timeout, retry/fallback, validation không? | 0-2 |
-| Benchmark | Có so sánh single vs multi-agent bằng metric cụ thể không? | 0-2 |
-| Trace explanation | Nhóm giải thích được trace: ai làm gì, tốn bao nhiêu, sai ở đâu không? | 0-2 |
+| Vai trò agent | Mỗi agent có nhiệm vụ rõ ràng, ít overlap không? | 0-2 |
+| Thiết kế state | Shared state có đủ thông tin cho handoff và debug không? | 0-2 |
+| Guardrail | Có max iterations, timeout, fallback và validation không? | 0-2 |
+| Benchmark | Có so sánh baseline và multi-agent bằng metric cụ thể không? | 0-2 |
+| Trace và analysis | Nhóm giải thích được trace, analysis và agent nào làm gì không? | 0-2 |
 
-## Feedback format
+## Format Feedback
 
 ```text
-Strength:
-Risk / failure mode:
-One concrete improvement:
-Score:
+Điểm mạnh:
+Rủi ro / failure mode:
+Một cải tiến cụ thể:
+Điểm:
 ```

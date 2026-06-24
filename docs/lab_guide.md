@@ -1,77 +1,111 @@
-# Lab Guide: Multi-Agent Research System
+# Hướng Dẫn Lab: Hệ Thống Nghiên Cứu Đa Tác Nhân
 
-## Scenario
+## Bối Cảnh
 
-Bạn cần xây dựng một research assistant có thể nhận câu hỏi dài, tìm thông tin, phân tích và viết câu trả lời cuối cùng. Lab yêu cầu so sánh hai cách làm:
+Bạn cần xây dựng một research assistant có thể nhận câu hỏi, thu thập bằng chứng, phân tích và viết câu trả lời cuối cùng. Lab so sánh hai cách làm:
 
-1. **Single-agent baseline**: một agent làm toàn bộ.
-2. **Multi-agent workflow**: Supervisor điều phối Researcher, Analyst, Writer.
+1. **Single-agent baseline**: một agent làm toàn bộ nhiệm vụ.
+2. **Multi-agent workflow**: Supervisor điều phối Researcher, Analyst và Writer.
 
-## Quy tắc quan trọng
+## Quy Tắc Quan Trọng
 
-- Không thêm agent nếu không có lý do rõ ràng.
-- Mỗi agent phải có responsibility riêng.
-- Shared state phải đủ rõ để debug.
-- Phải có trace hoặc log cho từng bước.
-- Phải benchmark, không chỉ nhìn output bằng cảm tính.
+- Mỗi agent phải có trách nhiệm rõ ràng.
+- Shared state phải đủ chi tiết để debug.
+- Mỗi bước cần để lại trace event hoặc agent result.
+- Hệ thống phải có benchmark thay vì chỉ đánh giá output bằng cảm tính.
+- Guardrail phải ngăn workflow chạy vô hạn.
 
 ## Milestone 1: Baseline
 
-File gợi ý:
+File liên quan:
 
 - `src/multi_agent_research_lab/cli.py`
 - `src/multi_agent_research_lab/services/llm_client.py`
 
-TODO(student): thay baseline placeholder bằng một call LLM thật.
+Lệnh baseline gọi `LLMClient`. Trong phiên bản hoàn thiện này, `LLMClient` dùng fallback deterministic để chạy offline, không cần API key.
 
 ## Milestone 2: Supervisor
 
-File gợi ý:
+File liên quan:
 
 - `src/multi_agent_research_lab/agents/supervisor.py`
 - `src/multi_agent_research_lab/graph/workflow.py`
 
-TODO(student): implement routing policy.
+Supervisor đọc `ResearchState` để quyết định route:
 
-Gợi ý câu hỏi thiết kế:
+- Thiếu research notes: gọi Researcher.
+- Thiếu analysis notes: gọi Analyst.
+- Thiếu final answer: gọi Writer.
+- Đã đủ output hoặc đạt max iterations: dừng ở Done.
 
-- Khi nào gọi Researcher?
-- Khi nào gọi Analyst?
-- Khi nào gọi Writer?
-- Khi nào stop?
-- Nếu agent fail thì retry hay fallback?
+## Milestone 3: Worker Agents
 
-## Milestone 3: Worker agents
-
-File gợi ý:
+File liên quan:
 
 - `agents/researcher.py`
 - `agents/analyst.py`
 - `agents/writer.py`
 
-TODO(student): implement từng worker.
+Hành vi đã triển khai:
 
-## Milestone 4: Trace và benchmark
+- Researcher thu thập local mock sources và tạo research notes.
+- Analyst tạo key claims, risks và evaluation recommendations.
+- Writer tổng hợp final answer thông qua `LLMClient`.
 
-File gợi ý:
+## Milestone 4: Trace Và Benchmark
+
+File liên quan:
 
 - `observability/tracing.py`
 - `evaluation/benchmark.py`
 - `evaluation/report.py`
 
-Benchmark tối thiểu:
+Metric benchmark:
 
-| Metric | Cách đo gợi ý |
+| Metric | Cách đo |
 |---|---|
-| Latency | wall-clock time |
-| Cost | token usage hoặc provider usage |
-| Quality | rubric 0-10 do peer review |
-| Citation coverage | số claims có source / tổng claims chính |
-| Failure rate | số query fail / tổng query |
+| Latency | Wall-clock time |
+| Cost | Tổng cost metadata từ agent result |
+| Quality | Điểm 0-10 dựa trên completeness và source coverage |
+| Citation coverage | Số source thu thập được |
+| Failure rate | Số lỗi trong state |
 
-## Exit ticket
+## Cách Kiểm Tra
 
-Mỗi nhóm trả lời 2 câu:
+Chạy test:
 
-1. Case nào nên dùng multi-agent? Vì sao?
-2. Case nào không nên dùng multi-agent? Vì sao?
+```powershell
+pytest
+```
+
+Nếu bị lỗi quyền ghi `.pytest_cache`, chạy:
+
+```powershell
+pytest -o cache_dir=$env:TEMP\pytest_cache
+```
+
+Chạy baseline:
+
+```powershell
+$env:PYTHONPATH="src"
+python -m multi_agent_research_lab.cli baseline --query "Research GraphRAG state-of-the-art"
+```
+
+Chạy multi-agent:
+
+```powershell
+$env:PYTHONPATH="src"
+python -m multi_agent_research_lab.cli multi-agent --query "Research GraphRAG state-of-the-art"
+```
+
+Sau khi chạy multi-agent, xem report tại:
+
+```text
+reports/benchmark_report.md
+```
+
+Report cần có đủ `Câu Trả Lời Cuối Cùng`, `Phân Tích`, `Trace`, `Lịch Sử Route`, `Nguồn`, `Chỉ Số` và `Lỗi Tiềm Ẩn Và Cách Khắc Phục`.
+
+## Exit Ticket
+
+Nên dùng multi-agent khi bài toán cần nhiều vai trò tách biệt, handoff rõ ràng và trace dễ kiểm chứng. Không nên dùng multi-agent cho tác vụ đơn giản vì routing sẽ làm tăng latency và độ phức tạp.
